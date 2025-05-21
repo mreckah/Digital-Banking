@@ -1,0 +1,379 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+    .result-card {
+        border-left: 5px solid {{ result_color }};
+        transition: all 0.3s ease;
+    }
+
+    .result-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+
+    .parameter-card {
+        border-radius: 10px;
+        transition: all 0.3s ease;
+    }
+
+    .parameter-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    }
+
+    .chart-container {
+        position: relative;
+        height: 400px;
+        margin-bottom: 2rem;
+        background-color: var(--bs-card-bg);
+        border-radius: 10px;
+        padding: 1rem;
+    }
+
+    .parameter-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+    }
+
+    .parameter-status {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 5px;
+    }
+
+    .status-good {
+        background-color: #2ecc71;
+    }
+
+    .status-warning {
+        background-color: #f1c40f;
+    }
+
+    .status-danger {
+        background-color: #e74c3c;
+    }
+
+    .download-btn {
+        transition: all 0.3s ease;
+    }
+
+    .download-btn:hover {
+        transform: translateY(-2px);
+    }
+
+    .recommendation-card {
+        border-left: 4px solid #0077b6;
+    }
+
+    .chart-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        color: var(--bs-body-color);
+    }
+
+    .chart-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .chart-card {
+        background-color: var(--bs-card-bg);
+        border-radius: 10px;
+        padding: 1rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .confidence-gauge {
+        position: relative;
+        width: 100%;
+        height: 300px;
+        margin: 0 auto;
+    }
+
+    .confidence-value {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 2.5rem;
+        font-weight: bold;
+        text-align: center;
+    }
+
+    .confidence-label {
+        font-size: 1.2rem;
+        color: var(--bs-text-muted);
+        margin-top: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Result Summary -->
+    <div class="row justify-content-center mb-5">
+        <div class="col-lg-8">
+            <div class="card result-card border-0 shadow-sm">
+                <div class="card-body p-4 text-center">
+                    <div class="result-icon mb-3" style="color: {{ result_color }}; font-size: 3rem;">
+                        <i class="fas fa-{{ icon_class }}"></i>
+                    </div>
+                    <h2 class="display-5 fw-bold mb-3">{{ result_emoji }} {{ result_message }}</h2>
+                    <div class="mb-4">
+                        <div class="d-inline-block bg-light rounded-pill px-4 py-2">
+                            <span class="text-muted me-2">Confiance:</span>
+                            <span class="fw-bold" style="color: {{ result_color }};">{{ confidence }}%</span>
+                        </div>
+                    </div>
+                    <p class="text-muted mb-0">
+                        <i class="far fa-calendar-alt me-1"></i> Analyse effectuée le {{ analysis_date }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row justify-content-center mb-5">
+        <div class="col-lg-8">
+            <div class="d-flex justify-content-center gap-3">
+                <a href="#" class="btn btn-outline-primary download-btn" onclick="generatePDF()">
+                    <i class="fas fa-file-pdf me-2"></i>Télécharger PDF
+                </a>
+                <a href="#" class="btn btn-outline-primary download-btn" onclick="shareResults()">
+                    <i class="fas fa-share-alt me-2"></i>Partager
+                </a>
+                <a href="{{ url_for('index') }}" class="btn btn-outline-primary download-btn">
+                    <i class="fas fa-redo me-2"></i>Nouvelle Analyse
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confidence Visualization -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h3 class="mb-0">
+                        <i class="fas fa-chart-pie text-primary me-2"></i>
+                        Niveau de Confiance
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="chart-grid">
+                        <div class="chart-card">
+                            <div class="confidence-gauge">
+                                <canvas id="confidenceGauge"></canvas>
+                                <div class="confidence-value">
+                                    {{ confidence }}%
+                                    <div class="confidence-label">Niveau de Confiance</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recommendations -->
+    <div class="row">
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h3 class="mb-0">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        Paramètres Optimaux
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>pH</span>
+                                <div>
+                                    <span class="badge bg-success me-2">6.5 - 8.5</span>
+                                    <span class="text-muted small">Idéal: 7.0</span>
+                                </div>
+                            </div>
+                        </li>
+                        <li class="list-group-item border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>Dureté</span>
+                                <div>
+                                    <span class="badge bg-success me-2">50 - 150 mg/L</span>
+                                    <span class="text-muted small">Idéal: 100 mg/L</span>
+                                </div>
+                            </div>
+                        </li>
+                        <li class="list-group-item border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>Chloramines</span>
+                                <div>
+                                    <span class="badge bg-success me-2">≤ 4 mg/L</span>
+                                    <span class="text-muted small">Idéal: 2 mg/L</span>
+                                </div>
+                            </div>
+                        </li>
+                        <li class="list-group-item border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>Sulfate</span>
+                                <div>
+                                    <span class="badge bg-success me-2">≤ 250 mg/L</span>
+                                    <span class="text-muted small">Idéal: 150 mg/L</span>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h3 class="mb-0">
+                        <i class="fas fa-lightbulb text-warning me-2"></i>
+                        Recommandations
+                    </h3>
+                </div>
+                <div class="card-body">
+                    {% if confidence >= 75 %}
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle me-2"></i>
+                        Votre eau est de bonne qualité. Continuez à surveiller régulièrement les paramètres.
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Nous recommandons de traiter votre eau avant consommation. Consultez un spécialiste.
+                    </div>
+                    {% endif %}
+
+                    <div class="recommendation-card p-3 bg-light rounded mb-3">
+                        <h5 class="mb-2">Actions Immédiates</h5>
+                        <ul class="list-unstyled mb-0">
+                            <li class="mb-2">
+                                <i class="fas fa-filter text-primary me-2"></i>
+                                Utilisez un système de filtration approprié
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-tint text-primary me-2"></i>
+                                Faites tester votre eau régulièrement
+                            </li>
+                            <li>
+                                <i class="fas fa-user-md text-primary me-2"></i>
+                                Consultez un expert en qualité de l'eau
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="recommendation-card p-3 bg-light rounded">
+                        <h5 class="mb-2">Surveillance à Long Terme</h5>
+                        <ul class="list-unstyled mb-0">
+                            <li class="mb-2">
+                                <i class="fas fa-calendar-check text-primary me-2"></i>
+                                Planifiez des tests mensuels
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-chart-line text-primary me-2"></i>
+                                Suivez l'évolution des paramètres
+                            </li>
+                            <li>
+                                <i class="fas fa-book text-primary me-2"></i>
+                                Tenez un journal des résultats
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Get the current theme
+    const isDarkMode = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+    const textColor = isDarkMode ? '#e9ecef' : '#212529';
+    const gridColor = isDarkMode ? '#373b3e' : '#dee2e6';
+    const backgroundColor = isDarkMode ? '#2c3034' : '#ffffff';
+
+    // Confidence Gauge Chart
+    const confidenceCtx = document.getElementById('confidenceGauge');
+    new Chart(confidenceCtx, {
+        type: 'doughnut',
+        data: {
+            datasets: [{
+                data: [{{ confidence }}, 100 - {{ confidence }}],
+                backgroundColor: [
+                    '{{ result_color }}',
+                    isDarkMode ? '#343a40' : '#e9ecef'
+                ],
+                borderWidth: 0,
+                circumference: 180,
+                rotation: 270
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '80%',
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    enabled: false
+                }
+            }
+        }
+    });
+});
+
+// PDF Generation
+function generatePDF() {
+    // Create a form with the current data
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = "{{ url_for('generate_pdf') }}";
+    
+    // Add all parameter values to the form
+    {% for name, data in input_values.items() %}
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = '{{ name }}';
+    input.value = '{{ data.value }}';
+    form.appendChild(input);
+    {% endfor %}
+    
+    // Add the form to the document and submit it
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+}
+
+// Share Results
+function shareResults() {
+    if (navigator.share) {
+        navigator.share({
+            title: 'Résultats d\'analyse AquaScan',
+            text: 'Consultez mes résultats d\'analyse de potabilité d\'eau sur AquaScan!',
+            url: window.location.href
+        })
+        .catch(error => console.log('Erreur de partage:', error));
+    } else {
+        alert('Le partage n\'est pas supporté sur votre navigateur');
+    }
+}
+</script>
+{% endblock %}

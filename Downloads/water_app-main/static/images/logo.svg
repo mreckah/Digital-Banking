@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 600">
+  <path fill="#0077B6" d="M256 32C150 32 64 118 64 224c0 90 128 224 192 256 64-32 192-166 192-256 0-106-86-192-192-192z"/>
+  <path fill="#FFFFFF" d="M378 176c-6-6-16-6-22 0L224 308l-70-70c-6-6-16-6-22 0s-6 16 0 22l80 80c3 3 7 5 11 5s8-2 11-5l144-144c6-6 6-16 0-22z"/>
+  <text x="250" y="530" font-family="Arial" font-size="60" font-weight="bold" text-anchor="middle" fill="#0077B6">AquaCheck</text>
+</svg>
